@@ -1,0 +1,52 @@
+on property:persist.vendor.log.thermal=1
+    start vendor.thermal.logd
+
+on property:persist.vendor.log.thermal=0
+    stop vendor.thermal.logd
+
+on property:persist.vendor.log.thermal=1 && property:persist.vendor.log.thermal.interval=*
+    restart vendor.thermal.logd
+
+service vendor.thermal.logd /vendor/bin/thermal_logd ${persist.vendor.log.thermal.interval:-5}
+    class main
+    user root
+    group root system
+    disabled
+
+# Switch thermal protection for Pixels
+on property:persist.vendor.disable.thermal.control=*
+    setprop vendor.disable.thermal.control ${persist.vendor.disable.thermal.control}
+
+on property:persist.vendor.disable.thermalhal.control=*
+    setprop vendor.disable.thermalhal.control ${persist.vendor.disable.thermalhal.control}
+
+on property:persist.vendor.disable.usb.overheat.mitigation=*
+    setprop vendor.disable.usb.overheat.mitigation.control ${persist.vendor.disable.usb.overheat.mitigation}
+
+on property:persist.vendor.disable.bcl.control=*
+    setprop vendor.disable.bcl.control ${persist.vendor.disable.bcl.control}
+
+on property:vendor.disable.thermalhal.control=* && property:vendor.thermal.link_ready=1
+    restart vendor.thermal-hal
+
+on property:vendor.disable.thermal.control=1 && property:vendor.thermal.link_ready=1
+    setprop vendor.disable.thermalhal.control 1
+
+on property:vendor.disable.thermal.control=0 && property:vendor.thermal.link_ready=1
+    setprop vendor.disable.thermalhal.control 0
+
+# Toggle BCL control
+on property:vendor.disable.bcl.control=1
+    write /dev/thermal/tz-by-name/soc/mode disabled
+
+on property:vendor.disable.bcl.control=0
+    write /dev/thermal/tz-by-name/soc/mode enabled
+
+# Switch USB port overheat protection
+on property:vendor.disable.usb.overheat.mitigation.control=1
+    write /sys/module/overheat_mitigation/parameters/enable 0
+    write /dev/thermal/tz-by-name/usb_pwr_therm2/emul_temp 25000
+
+on property:vendor.disable.usb.overheat.mitigation.control=0
+    write /sys/module/overheat_mitigation/parameters/enable 1
+    write /dev/thermal/tz-by-name/usb_pwr_therm2/emul_temp 0
